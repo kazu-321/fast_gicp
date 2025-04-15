@@ -13,8 +13,10 @@ find_package(PCL REQUIRED COMPONENTS io registration)
 find_package(Eigen3 REQUIRED)
 find_package(OpenMP)
 find_package(tf2_ros REQUIRED)
+find_package(tf2 REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(autoware_localization_util REQUIRED)
 
 if (OPENMP_FOUND)
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -36,9 +38,11 @@ add_library(fast_gicp SHARED
 target_link_libraries(fast_gicp
   ${PCL_LIBRARIES}
 )
+ament_target_dependencies(fast_gicp tf2)
 ament_target_dependencies(fast_gicp tf2_ros)
 ament_target_dependencies(fast_gicp sensor_msgs)
 ament_target_dependencies(fast_gicp pcl_conversions)
+ament_target_dependencies(fast_gicp autoware_localization_util)
 if (OPENMP_FOUND)
     if (TARGET OpenMP::OpenMP_CXX)
         target_link_libraries(fast_gicp OpenMP::OpenMP_CXX)
@@ -56,14 +60,15 @@ target_link_libraries(gicp_align
   ${PCL_LIBRARIES}
   fast_gicp
 )
-ament_target_dependencies(gicp_align tf2_ros sensor_msgs pcl_conversions)
+ament_target_dependencies(gicp_align tf2 tf2_ros sensor_msgs pcl_conversions autoware_localization_util)
 
 add_executable(gicp_kitti src/kitti.cpp)
 target_link_libraries(gicp_kitti
   ${PCL_LIBRARIES}
   fast_gicp
 )
-ament_target_dependencies(gicp_kitti tf2_ros sensor_msgs pcl_conversions)
+
+ament_target_dependencies(gicp_kitti tf2 tf2_ros sensor_msgs pcl_conversions autoware_localization_util)
 
 if(BUILD_PYTHON_BINDINGS)
   find_package(pybind11 CONFIG)

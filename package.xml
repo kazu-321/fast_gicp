@@ -20,6 +20,7 @@
   <build_depend>eigen3_cmake_module</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>tf2</build_depend>
   <build_depend>tf2_ros</build_depend>
 
   <exec_depend>rclcpp</exec_depend>
@@ -27,7 +28,10 @@
   <exec_depend>pcl_conversions</exec_depend>
   <exec_depend>pcl_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>tf2</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+
+  <depend>autoware_localization_util</depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>
