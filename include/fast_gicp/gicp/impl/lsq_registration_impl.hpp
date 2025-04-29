@@ -45,6 +45,11 @@ const Eigen::Matrix<double, 6, 6>& LsqRegistration<PointTarget, PointSource>::ge
 }
 
 template <typename PointTarget, typename PointSource>
+const int LsqRegistration<PointTarget, PointSource>::getFinalNumIteration() const {
+  return nr_iterations_;
+}
+
+template <typename PointTarget, typename PointSource>
 double LsqRegistration<PointTarget, PointSource>::evaluateCost(const Eigen::Matrix4f& relative_pose, Eigen::Matrix<double, 6, 6>* H, Eigen::Matrix<double, 6, 1>* b) {
   return this->linearize(Eigen::Isometry3f(relative_pose).cast<double>(), H, b);
 }

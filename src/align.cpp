@@ -9,10 +9,11 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 #include "autoware/localization_util/util_func.hpp"
 
 #define TARGET_TOPIC "/localization/util/downsample/pointcloud"
-// #define TARGET_TOPIC "/sensing/lidar/concatenated/pointcloud"
 #define PCD_FILE "/home/kazusahashimoto/autoware_map/sample-map-rosbag/pointcloud_map.pcd"
 
 
@@ -23,10 +24,13 @@ public:
   AlignNode() : Node("align_node") {
     source_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       TARGET_TOPIC, rclcpp::SensorDataQoS(), std::bind(&AlignNode::targetCallback, this, std::placeholders::_1));
-    result_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("aligned_cloud", 10);
-    source_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("source_cloud", 10);
-    target_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("target_cloud", 10);
-    pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10);
+    result_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/vgicp/aligned_cloud", 10);
+    source_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/vgicp/source_cloud", 10);
+    target_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/vgicp/target_cloud", 10);
+    pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/vgicp/pose", 10);
+    fitness_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>("/vgicp/fitness_score", 10);
+    exec_time_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>("/vgicp/exec_time_ms", 10);
+    pose_cov_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/vgicp/pose_with_covariance", 10);
     pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "/localization/pose_with_covariance", rclcpp::SensorDataQoS(), [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
         initial_guess_ = pose_to_matrix4f(msg->pose.pose);
@@ -46,6 +50,7 @@ public:
     
     vgicp.clearTarget();
     vgicp.setInputTarget(target_cloud_);
+    vgicp.setNumThreads(4);
     RCLCPP_INFO(this->get_logger(), "Loaded source cloud with %zu points", target_cloud_->size());
   }
   
@@ -63,15 +68,6 @@ public:
     
     vgicp.clearSource();
     vgicp.setInputSource(source_cloud_);
-    // vgicp.setMaxCorrespondenceDistance(/*10万m*/ 100.0);
-    // initial pose:
-    //       x: 89571.14980514892
-    //       y: 42301.19104443626
-    //       z: 0.0
-    // initial_guess_ << 1.000000, 0.000000, 0.000000, 89571.14980514892,
-    //                   0.000000, 1.000000, 0.000000, 42301.19104443626,
-    //                   0.000000, 0.000000, 1.000000, 0.0,
-    //                   0.000000, 0.000000, 0.000000, 1.0;
 
     vgicp.align(*aligned, initial_guess_);
 
@@ -84,6 +80,12 @@ public:
       return;
     }
 
+    autoware_internal_debug_msgs::msg::Float32Stamped exec_time_msg;
+    exec_time_msg.stamp = this->get_clock()->now();
+    exec_time_msg.data = dt;
+    exec_time_pub_->publish(exec_time_msg);
+
+
     
     // publish tf transform map -> base_link
     Eigen::Matrix4f transform = vgicp.getFinalTransformation();
@@ -93,7 +95,12 @@ public:
     // fitness score
     double fitness_score = vgicp.getFitnessScore();
     RCLCPP_INFO(this->get_logger(), "Fitness score: %f", fitness_score);
-    
+
+    autoware_internal_debug_msgs::msg::Float32Stamped fitness_msg;
+    fitness_msg.stamp = this->get_clock()->now();
+    fitness_msg.data = fitness_score;
+    fitness_pub_->publish(fitness_msg);
+
     // info xyz
     RCLCPP_INFO(this->get_logger(), "Translation: [%f, %f, %f]", t.x(), t.y(), t.z());
     
@@ -124,6 +131,26 @@ public:
     pose_msg.pose.orientation.z = q.z();
     pose_msg.pose.orientation.w = q.w();
     pose_pub_->publish(pose_msg);
+
+    // publish pose with covariance
+    geometry_msgs::msg::PoseWithCovarianceStamped pose_cov_msg;
+    pose_cov_msg.header.stamp = this->get_clock()->now();
+    pose_cov_msg.header.frame_id = "map";
+    pose_cov_msg.pose.pose.position.x = t.x();
+    pose_cov_msg.pose.pose.position.y = t.y();
+    pose_cov_msg.pose.pose.position.z = t.z();
+    pose_cov_msg.pose.pose.orientation.x = q.x();
+    pose_cov_msg.pose.pose.orientation.y = q.y();
+    pose_cov_msg.pose.pose.orientation.z = q.z();
+    pose_cov_msg.pose.pose.orientation.w = q.w();
+
+    // get_final_hessian
+    Eigen::Matrix<double, 6, 6> hessian = vgicp.getFinalHessian();
+    Eigen::Matrix<double, 6, 1> hessian_diag = hessian.diagonal();
+    for (int i = 0; i < 6; ++i) {
+      pose_cov_msg.pose.covariance[i * 6 + i] = hessian_diag(i) > 1e-6 ? 1.0 / hessian_diag(i) : 1e6;
+    }
+    pose_cov_pub_->publish(pose_cov_msg);
     
     sensor_msgs::msg::PointCloud2 output_msg;
     pcl::toROSMsg(*aligned, output_msg);
@@ -154,6 +181,9 @@ public:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr source_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr target_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr fitness_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr exec_time_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_cov_pub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   

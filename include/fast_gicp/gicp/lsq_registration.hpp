@@ -53,6 +53,7 @@ public:
   void setDebugPrint(bool lm_debug_print);
 
   const Eigen::Matrix<double, 6, 6>& getFinalHessian() const;
+  const int getFinalNumIteration() const;
 
   double evaluateCost(const Eigen::Matrix4f& relative_pose, Eigen::Matrix<double, 6, 6>* H = nullptr, Eigen::Matrix<double, 6, 1>* b = nullptr);
 
