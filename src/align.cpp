@@ -3,7 +3,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
 #include <rclcpp/qos.hpp>
-#include <fast_gicp/gicp/fast_vgicp.hpp>
+#include <fast_gicp/gicp/fast_vgicp_cuda.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/convert.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -40,7 +40,7 @@ public:
     
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
     
-    vgicp.setNumThreads(omp_get_max_threads());
+    // vgicp.setNumThreads(omp_get_max_threads());
     // Load source cloud from PCD file
     if (pcl::io::loadPCDFile<pcl::PointXYZ>(PCD_FILE, *target_cloud_) == -1) {
       RCLCPP_ERROR(this->get_logger(), "Couldn't read source PCD file");
@@ -50,7 +50,9 @@ public:
     
     vgicp.clearTarget();
     vgicp.setInputTarget(target_cloud_);
-    vgicp.setNumThreads(4);
+    // vgicp.setNumThreads(4);
+    vgicp.setResolution(0.5);
+    vgicp.setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::GPU_BRUTEFORCE);
     RCLCPP_INFO(this->get_logger(), "Loaded source cloud with %zu points", target_cloud_->size());
   }
   
@@ -190,7 +192,7 @@ public:
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_cloud_{new pcl::PointCloud<pcl::PointXYZ>()};
   pcl::PointCloud<pcl::PointXYZ>::Ptr source_cloud_{new pcl::PointCloud<pcl::PointXYZ>()};
   Eigen::Matrix4f initial_guess_;
-  fast_gicp::FastVGICP<pcl::PointXYZ, pcl::PointXYZ> vgicp;
+  fast_gicp::FastVGICPCuda<pcl::PointXYZ, pcl::PointXYZ> vgicp;
 };
 
 int main(int argc, char** argv) {

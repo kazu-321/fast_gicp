@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(fast_gicp)
 
-option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" OFF)
+option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" ON)
 option(BUILD_apps "Build application programs" ON)
 option(BUILD_test "Build test programs" OFF)
 option(BUILD_PYTHON_BINDINGS "Build python bindings" OFF)
@@ -24,17 +24,18 @@ if (OPENMP_FOUND)
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-if(BUILD_VGICP_CUDA)
+# if(BUILD_VGICP_CUDA)
   find_package(CUDA REQUIRED)
   include_directories(${CUDA_INCLUDE_DIRS})
   link_directories(${CUDA_LIBRARY_DIRS})
-endif()
+# endif()
 
 add_library(fast_gicp SHARED
   src/fast_gicp/gicp/lsq_registration.cpp
   src/fast_gicp/gicp/fast_gicp.cpp
   src/fast_gicp/gicp/fast_gicp_st.cpp
   src/fast_gicp/gicp/fast_vgicp.cpp
+  src/fast_gicp/gicp/fast_vgicp_cuda.cpp
 )
 target_link_libraries(fast_gicp
   ${PCL_LIBRARIES}
@@ -61,6 +62,7 @@ add_executable(gicp_align src/align.cpp)
 target_link_libraries(gicp_align
   ${PCL_LIBRARIES}
   fast_gicp
+  fast_vgicp_cuda
 )
 ament_target_dependencies(gicp_align tf2 tf2_ros sensor_msgs pcl_conversions autoware_localization_util autoware_internal_debug_msgs)
 
@@ -79,7 +81,7 @@ if(BUILD_PYTHON_BINDINGS)
   )
 endif()
 
-if(BUILD_VGICP_CUDA)
+# if(BUILD_VGICP_CUDA)
   set(CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
   add_definitions(-DUSE_VGICP_CUDA)
 
@@ -95,6 +97,7 @@ if(BUILD_VGICP_CUDA)
     src/fast_gicp/cuda/compute_mahalanobis.cu
     src/fast_gicp/cuda/ndt_cuda.cu
     src/fast_gicp/cuda/ndt_compute_derivatives.cu
+    src/fast_gicp/gicp/fast_vgicp_cuda.cpp
   )
   target_include_directories(fast_vgicp_cuda PRIVATE
     include
@@ -104,7 +107,7 @@ if(BUILD_VGICP_CUDA)
   target_link_libraries(fast_vgicp_cuda
     fast_gicp
   )
-endif()
+# endif()
 
 if(BUILD_test)
   find_package(GTest REQUIRED)
