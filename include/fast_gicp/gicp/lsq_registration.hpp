@@ -51,6 +51,7 @@ public:
   void setRotationEpsilon(double eps);
   void setInitialLambdaFactor(double init_lambda_factor);
   void setDebugPrint(bool lm_debug_print);
+  void setMaxIterations(int max_iterations);
 
   const Eigen::Matrix<double, 6, 6>& getFinalHessian() const;
   const int getFinalNumIteration() const;
