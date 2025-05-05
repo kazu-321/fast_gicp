@@ -30,6 +30,7 @@ public:
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/vgicp/pose", 10);
     fitness_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>("/vgicp/fitness_score", 10);
     exec_time_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>("/vgicp/exec_time_ms", 10);
+    iter_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Int32Stamped>("/vgicp/iter", 10);
     pose_cov_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/vgicp/pose_with_covariance", 10);
     pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "/localization/pose_with_covariance", rclcpp::SensorDataQoS(), [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
@@ -52,6 +53,7 @@ public:
     vgicp.setInputTarget(target_cloud_);
     // vgicp.setNumThreads(4);
     vgicp.setResolution(0.5);
+    vgicp.setMaxIterations(500);
     vgicp.setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::GPU_BRUTEFORCE);
     RCLCPP_INFO(this->get_logger(), "Loaded source cloud with %zu points", target_cloud_->size());
   }
@@ -87,6 +89,10 @@ public:
     exec_time_msg.data = dt;
     exec_time_pub_->publish(exec_time_msg);
 
+    autoware_internal_debug_msgs::msg::Int32Stamped iter_msg;
+    iter_msg.stamp = this->get_clock()->now();
+    iter_msg.data = vgicp.getFinalNumIteration();
+    iter_pub_->publish(iter_msg);
 
     
     // publish tf transform map -> base_link
@@ -185,6 +191,7 @@ public:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr fitness_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr exec_time_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Int32Stamped>::SharedPtr iter_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_cov_pub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
