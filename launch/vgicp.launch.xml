@@ -1,0 +1,11 @@
+<launch>
+  <node pkg="fast_gicp" exec="gicp_align" name="vgicp" output="screen">
+    <param name="vgicp.max_iterations" value="60"/>
+    <param name="vgicp.resolution" value="5.0"/>
+
+  </node>
+  <node pkg="rviz2" exec="rviz2" name="rviz" output="screen">
+    <param name="config" value="$(find-pkg-share fast_gicp)/rviz/fast_gicp.rviz"/>
+  </node>
+  <executable cmd="ros2 bag play ./rosbag2_2025_04_21-15_48_21 -l -r 1"/>
+</launch>
