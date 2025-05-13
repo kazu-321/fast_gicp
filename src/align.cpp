@@ -48,12 +48,19 @@ public:
       throw std::runtime_error("Failed to load source PCD file");
     }
     // vgicp.setResolution(1.0);
-    
+    double resolution;
+    int max_iterations;
+
+    this->declare_parameter("vgicp.resolution", 4.0);
+    this->get_parameter("vgicp.resolution", resolution);
+    this->declare_parameter("vgicp.max_iterations", 50);
+    this->get_parameter("vgicp.max_iterations", max_iterations);
+
     vgicp.clearTarget();
     vgicp.setInputTarget(target_cloud_);
     // vgicp.setNumThreads(4);
-    vgicp.setResolution(0.5);
-    vgicp.setMaxIterations(500);
+    vgicp.setResolution(resolution);
+    vgicp.setMaxIterations(max_iterations);
     vgicp.setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::GPU_BRUTEFORCE);
     RCLCPP_INFO(this->get_logger(), "Loaded source cloud with %zu points", target_cloud_->size());
   }
@@ -78,7 +85,7 @@ public:
     auto t2 = std::chrono::high_resolution_clock::now();
     double dt = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() / 1e6;
 
-    RCLCPP_INFO(this->get_logger(), "Alignment took %f ms", dt);
+    // RCLCPP_INFO(this->get_logger(), "Alignment took %f ms", dt);
     if (!vgicp.hasConverged()) {
       RCLCPP_WARN(this->get_logger(), "Alignment failed");
       return;

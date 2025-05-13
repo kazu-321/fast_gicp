@@ -132,3 +132,7 @@ ament_package()
 install(TARGETS gicp_align
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
+
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+)
