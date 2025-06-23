@@ -4,6 +4,7 @@
 #include <pcl/io/pcd_io.h>
 #include <rclcpp/qos.hpp>
 #include <fast_gicp/gicp/fast_vgicp_cuda.hpp>
+#include <fast_gicp/ndt/ndt_cuda.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/convert.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -14,7 +15,8 @@
 #include "autoware/localization_util/util_func.hpp"
 
 #define TARGET_TOPIC "/localization/util/downsample/pointcloud"
-#define PCD_FILE "/home/kazusahashimoto/autoware_map/sample-map-rosbag/pointcloud_map.pcd"
+// #define PCD_FILE "/home/kazusahashimoto/autoware_map/sample-map-rosbag/pointcloud_map.pcd"
+#define PCD_FILE "/home/kazusahashimoto/ros2_ws/shinagawa_odaiba/map.pcd"
 
 
 using autoware::localization_util::pose_to_matrix4f;
@@ -62,6 +64,7 @@ public:
     vgicp.setResolution(resolution);
     vgicp.setMaxIterations(max_iterations);
     vgicp.setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::GPU_BRUTEFORCE);
+    // vgicp.setDistanceMode(fast_gicp::NDTDistanceMode::P2D);
     RCLCPP_INFO(this->get_logger(), "Loaded source cloud with %zu points", target_cloud_->size());
   }
   
@@ -180,11 +183,11 @@ public:
     source_msg.header.stamp = this->get_clock()->now();
     source_pub_->publish(source_msg);
     
-    sensor_msgs::msg::PointCloud2 target_msg;
-    pcl::toROSMsg(*target_cloud_, target_msg);
-    target_msg.header.frame_id = "map";
-    target_msg.header.stamp = this->get_clock()->now();
-    target_pub_->publish(target_msg);
+    // sensor_msgs::msg::PointCloud2 target_msg;
+    // pcl::toROSMsg(*target_cloud_, target_msg);
+    // target_msg.header.frame_id = "map";
+    // target_msg.header.stamp = this->get_clock()->now();
+    // target_pub_->publish(target_msg);
     
     
     // RCLCPP_INFO(this->get_logger(), "Published aligned cloud with %zu points", aligned->size());
@@ -207,6 +210,7 @@ public:
   pcl::PointCloud<pcl::PointXYZ>::Ptr source_cloud_{new pcl::PointCloud<pcl::PointXYZ>()};
   Eigen::Matrix4f initial_guess_;
   fast_gicp::FastVGICPCuda<pcl::PointXYZ, pcl::PointXYZ> vgicp;
+  // fast_gicp::NDTCuda<pcl::PointXYZ, pcl::PointXYZ> vgicp;
 };
 
 int main(int argc, char** argv) {

@@ -36,6 +36,7 @@ add_library(fast_gicp SHARED
   src/fast_gicp/gicp/fast_gicp_st.cpp
   src/fast_gicp/gicp/fast_vgicp.cpp
   src/fast_gicp/gicp/fast_vgicp_cuda.cpp
+  src/fast_gicp/ndt/ndt_cuda.cpp
 )
 target_link_libraries(fast_gicp
   ${PCL_LIBRARIES}
@@ -98,6 +99,7 @@ endif()
     src/fast_gicp/cuda/ndt_cuda.cu
     src/fast_gicp/cuda/ndt_compute_derivatives.cu
     src/fast_gicp/gicp/fast_vgicp_cuda.cpp
+    src/fast_gicp/ndt/ndt_cuda.cpp
   )
   target_include_directories(fast_vgicp_cuda PRIVATE
     include

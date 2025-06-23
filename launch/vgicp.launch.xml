@@ -7,5 +7,6 @@
   <node pkg="rviz2" exec="rviz2" name="rviz" output="screen">
     <param name="config" value="$(find-pkg-share fast_gicp)/rviz/fast_gicp.rviz"/>
   </node>
-  <executable cmd="ros2 bag play ./rosbag2_2025_04_21-15_48_21 -l -r 1"/>
+  <!-- <executable cmd="ros2 bag play ./rosbag2_2025_04_21-15_48_21 -l -r 1"/> -->
+  <executable cmd="ros2 bag play ./odaiba -l -r 1"/>
 </launch>
